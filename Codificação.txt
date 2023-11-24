@@ -1,5 +1,149 @@
-INSERT INTO tb_pedidos (id_pedido, dt_pedido, id_cliente, status_pedido)
-VALUES
+CREATE TABLE tb_produtos (
+    id_produto INT PRIMARY KEY,
+    nome VARCHAR(80),
+    descricao TEXT,
+    preco DECIMAL(10, 2),
+    qtd_estoque INT
+);
+
+CREATE TABLE tb_clientes (
+    id_cliente INT PRIMARY KEY,
+    nome VARCHAR(80),
+    ender_entrega TEXT,
+    contato VARCHAR(20)
+);
+
+CREATE TABLE tb_pedidos (
+    id_pedido INT PRIMARY KEY,
+    dt_pedido DATE,
+    id_cliente INT,
+    status_pedido VARCHAR(20),
+    FOREIGN KEY (id_cliente) REFERENCES tb_clientes(id_cliente)
+);
+
+CREATE TABLE tb_itens_pedido (
+    id_item INT PRIMARY KEY,
+    id_pedido INT,
+    id_produto INT,
+    qtd INT,
+    FOREIGN KEY (id_pedido) REFERENCES tb_pedidos(id_pedido),
+    FOREIGN KEY (id_produto) REFERENCES tb_produtos(id_produto)
+);
+
+
+DELIMITER $$
+
+CREATE PROCEDURE add_carrinho(IN id_cliente_pro INT, IN id_produto_pro INT, IN qtd_pro INT)
+BEGIN
+    INSERT INTO tb_itens_pedido (id_pedido, id_produto, qtd)
+    VALUES (
+        (SELECT MAX(id_pedido)
+        FROM tb_pedidos 
+        WHERE id_cliente = id_cliente_pro
+        AND status_pedido = 'Carrinho'),
+        id_produto_pro,
+        qtd_pro
+    );
+END $$
+
+CREATE PROCEDURE processa_pedido(IN id_pedido_pro INT)
+BEGIN
+    UPDATE tb_produtos
+    SET qtd_estoque = qtd_estoque - (
+        SELECT qtd
+        FROM tb_itens_pedido
+        WHERE id_pedido = id_pedido_pro
+    )
+    WHERE id_produto IN (
+        SELECT id_produto
+        FROM tb_itens_pedido
+        WHERE id_pedido = id_pedido_pro
+    );
+
+    UPDATE tb_pedidos
+    SET status_pedido = 'Realizado'
+    WHERE id_pedido = id_pedido_pro;
+END $$
+
+
+CREATE PROCEDURE calc_tot_pedido(IN id_pedido_pro INT, OUT total DECIMAL(10, 2))
+BEGIN
+    SELECT SUM(qtd * preco)
+    INTO total
+    FROM tb_itens_pedido
+    JOIN tb_produtos ON tb_itens_pedido.id_produto = tb_produtos.id_produto
+    WHERE id_pedido = id_pedido_pro;
+END $$
+
+DELIMITER ;
+
+CREATE VIEW produtos_disponiveis AS
+SELECT *
+FROM tb_produtos
+WHERE qtd_estoque > 0;
+
+
+CREATE VIEW historico_pedidos AS
+SELECT
+    tb_pedidos.id_pedido AS id_pedido,
+    tb_pedidos.dt_pedido,
+    tb_produtos.nome AS nome_produto,
+    tb_itens_pedido.qtd,
+    tb_produtos.preco,
+    (tb_itens_pedido.qtd * tb_produtos.preco) AS total
+FROM tb_pedidos
+JOIN tb_itens_pedido ON tb_pedidos.id_pedido = tb_itens_pedido.id_pedido
+JOIN tb_produtos ON tb_itens_pedido.id_produto = tb_produtos.id_produto
+WHERE tb_pedidos.id_cliente = (SELECT id_cliente FROM tb_itens_pedido WHERE tb_itens_pedido.id_pedido = tb_pedidos.id_pedido);
+
+
+INSERT INTO tb_produtos (id_produto, nome, descricao, preco, qtd_estoque) VALUES
+    (1, 'Webcam HD', 'Câmera para conferências online em alta definição', 49.99, 18),
+    (2, 'Tripé para Celular', 'Suporte ajustável para smartphones', 14.99, 25),
+    (3, 'Leitor de Cartão de Memória', 'Dispositivo para transferência de dados', 9.99, 30),
+    (4, 'Capa para Notebook', 'Capa protetora para notebooks', 19.99, 15),
+    (5, 'Roteador Wi-Fi', 'Roteador de alta velocidade para redes sem fio', 59.99, 10),
+    (6, 'HD Externo', 'Disco rígido externo para armazenamento adicional', 79.99, 12),
+    (7, 'Suporte para Laptop', 'Eleva o laptop para melhorar a ergonomia', 29.99, 20),
+    (8, 'Hub USB', 'Conecta múltiplos dispositivos USB a um único ponto', 12.99, 40),
+    (9, 'Mousepad com Carregamento Sem Fio', 'Mousepad com tecnologia de carregamento sem fio', 24.99, 15),
+    (10, 'Lâmpada Inteligente', 'Lâmpada que pode ser controlada por smartphone', 34.99, 8),
+    (11, 'Caixa de Cabos Organizadores', 'Organizador para cabos e fios', 8.99, 30),
+    (12, 'Cadeado Inteligente', 'Cadeado com controle via aplicativo móvel', 39.99, 12),
+    (13, 'Estabilizador de Tensão', 'Protege dispositivos eletrônicos contra picos de energia', 49.99, 10),
+    (14, 'Caneta Stylus para Tablet', 'Caneta sensível ao toque para tablets', 19.99, 25),
+    (15, 'Protetor de Tela para Smartphone', 'Película protetora para telas de smartphones', 6.99, 50),
+    (16, 'Bateria Externa para Celular', 'Carregador portátil para dispositivos móveis', 29.99, 20),
+    (17, 'Caixa de Som Inteligente', 'Caixa de som controlada por assistente virtual', 69.99, 15),
+    (18, 'Tapete para Mouse Ergonômico', 'Tapete com apoio para pulso para uso prolongado', 14.99, 30),
+    (19, 'Câmera de Segurança Wi-Fi', 'Câmera para monitoramento remoto de ambientes', 89.99, 10),
+    (20, 'Relógio Despertador Inteligente', 'Relógio que simula o nascer do sol para despertar suave', 54.99, 8);
+    
+    
+    INSERT INTO tb_clientes (id_cliente, nome, ender_entrega, contato) VALUES
+    (1, 'Ana Souza', 'Rua A, 123', '555-1234'),
+    (2, 'Carlos Lima', 'Av. B, 456', '555-5678'),
+    (3, 'Fernanda Oliveira', 'Rua C, 789', '555-9876'),
+    (4, 'Gabriel Santos', 'Av. D, 1011', '555-1122'),
+    (5, 'Julia Pereira', 'Rua E, 1314', '555-1414'),
+    (6, 'Lucas Silva', 'Av. F, 1516', '555-1616'),
+    (7, 'Mariana Costa', 'Rua G, 1718', '555-1818'),
+    (8, 'Pedro Almeida', 'Av. H, 1920', '555-2020'),
+    (9, 'Raquel Martins', 'Rua I, 2122', '555-2222'),
+    (10, 'Thiago Oliveira', 'Av. J, 2324', '555-2424'),
+    (11, 'Viviane Pereira', 'Rua K, 2526', '555-2626'),
+    (12, 'Bruno Souza', 'Av. L, 2728', '555-2828'),
+    (13, 'Cristina Lima', 'Rua M, 2930', '555-3030'),
+    (14, 'Diego Santos', 'Av. N, 3132', '555-3232'),
+    (15, 'Erika Silva', 'Rua O, 3334', '555-3434'),
+    (16, 'Felipe Costa', 'Av. P, 3536', '555-3636'),
+    (17, 'Giovanna Almeida', 'Rua Q, 3738', '555-3838'),
+    (18, 'Henrique Martins', 'Av. R, 3940', '555-4040'),
+    (19, 'Isabela Pereira', 'Rua S, 4142', '555-4242'),
+    (20, 'Jorge Oliveira', 'Av. T, 4344', '555-4444');
+
+
+INSERT INTO tb_pedidos (id_pedido, dt_pedido, id_cliente, status_pedido) VALUES
     (1, CURRENT_DATE, 1, 'Carrinho'),
     (2, '2023-11-25', 2, 'Realizado'),
     (3, CURRENT_DATE, 3, 'Carrinho'),
@@ -20,3 +164,39 @@ VALUES
     (18, '2024-01-20', 18, 'Realizado'),
     (19, CURRENT_DATE, 19, 'Carrinho'),
     (20, '2024-01-25', 20, 'Realizado');
+    
+    INSERT INTO tb_itens_pedido (id_item, id_pedido, id_produto, qtd) VALUES
+    (1, 1, 5, 2),
+    (2, 2, 12, 1),
+    (3, 3, 7, 3),
+    (4, 4, 19, 1),
+    (5, 5, 10, 2),
+    (6, 6, 16, 1),
+    (7, 7, 3, 1),
+    (8, 8, 18, 2),
+    (9, 9, 8, 1),
+    (10, 10, 20, 1),
+    (11, 11, 14, 2),
+    (12, 12, 9, 1),
+    (13, 13, 1, 3),
+    (14, 14, 6, 1),
+    (15, 15, 15, 2),
+    (16, 16, 2, 1),
+    (17, 17, 17, 1),
+    (18, 18, 11, 2),
+    (19, 19, 13, 1),
+    (20, 20, 4, 1);
+
+
+
+SELECT * FROM tb_produtos;
+
+SELECT * FROM tb_clientes;
+
+SELECT * FROM tb_pedidos;
+
+SELECT * FROM tb_itens_pedido;
+
+SELECT * FROM produtos_disponiveis;
+
+SELECT * FROM historico_pedidos;
