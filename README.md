@@ -4,7 +4,7 @@
 Tarefa com o objetivo de implementar um Banco de Dados solicitado pelo tutor, sendo a criação de um comércio eletrônico, no qual irá armazenar, atualizar, criar e exibir pedidos para o cliente.
 
 ## Diagrama com Atributos, Relacionamentos e Entidades
-![image](https://github.com/giovaniruiz03/Com-rcio-Eletr-nico/assets/145368122/dd66d215-3739-49a8-87ac-347acb2b5b40)
+![image](https://github.com/giovaniruiz03/Com-rcio-Eletr-nico/assets/145368122/b886f7d7-18b9-45b9-8690-99be2dbbc3b8)
 
 ## SELECT * FROM tb_produtos;
 ![image](https://github.com/giovaniruiz03/Com-rcio-Eletr-nico/assets/145368122/b2f499ba-d5a9-4317-bcbc-48ce99aafa3e)
